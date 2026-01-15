@@ -15,6 +15,15 @@
 void readseg(uchar*, uint, uint);
 
 void
+puts(char *s, int line)
+{
+  ushort *dst = (ushort*)(0xb8000 + line * 160);
+  while(*s){
+    *dst++ = (*s++) | 0x0700;
+  }
+}
+
+void
 bootmain(void)
 {
   struct elfhdr *elf;
@@ -22,12 +31,24 @@ bootmain(void)
   void (*entry)(void);
   uchar* pa;
 
+  // [BOOT] enter bootmain
+  {
+    char msg[] = {'[', 'B', 'O', 'O', 'T', ']', ' ', 'e', 'n', 't', 'e', 'r', ' ', 'b', 'o', 'o', 't', 'm', 'a', 'i', 'n', 0};
+    puts(msg, 0);
+  }
+
   // 0x10000 是一个暂存区域，用来存放读取的 ELF 头
   elf = (struct elfhdr*)0x10000;  // scratch space
 
   // Read 1st page off disk
   // 从磁盘读取第一页数据（4096字节），这通常包含了 ELF 头和程序头表
   readseg((uchar*)elf, 4096, 0);
+
+  // [BOOT] elf header loaded
+  {
+    char msg[] = {'[', 'B', 'O', 'O', 'T', ']', ' ', 'e', 'l', 'f', ' ', 'h', 'e', 'a', 'd', 'e', 'r', ' ', 'l', 'o', 'a', 'd', 'e', 'd', 0};
+    puts(msg, 1);
+  }
 
   // Is this an ELF executable?
   // 检查是否为合法的 ELF 可执行文件（通过检查魔数）
@@ -47,6 +68,12 @@ bootmain(void)
     // 如果内存大小大于文件大小，说明包含 BSS 段（未初始化数据），需要清零
     if(ph->memsz > ph->filesz)
       stosb(pa + ph->filesz, 0, ph->memsz - ph->filesz);
+  }
+
+  // [BOOT] kernel loaded
+  {
+    char msg[] = {'[', 'B', 'O', 'O', 'T', ']', ' ', 'k', 'e', 'r', 'n', 'e', 'l', ' ', 'l', 'o', 'a', 'd', 'e', 'd', 0};
+    puts(msg, 2);
   }
 
   // Call the entry point from the ELF header.

@@ -50,6 +50,7 @@ _start = V2P_WO(entry)
 # 在引导处理器上进入 xv6，此时分页已关闭。
 .globl entry
 entry:
+  # [BOOT] Kernel Entry Point (内核入口点)
   # Turn on page size extension for 4Mbyte pages
   # 开启页面大小扩展 (Page Size Extension, PSE)，允许使用 4MByte 的大页面
   movl    %cr4, %eax
