@@ -135,6 +135,11 @@ syscall(void)
   struct proc *curproc = myproc();
 
   num = curproc->tf->eax;
+  
+  if (num == SYS_write) {
+    cprintf("[KERNEL] enter syscall\n");
+  }
+
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     curproc->tf->eax = syscalls[num]();
   } else {
