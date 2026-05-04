@@ -176,6 +176,7 @@ UPROGS=\
 	_ln\
 	_ls\
 	_mkdir\
+	_prodcons\
 	_rm\
 	_sh\
 	_stressfs\

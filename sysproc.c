@@ -6,6 +6,71 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "spinlock.h"
+
+// Producer-Consumer Buffer
+#define BUF_SIZE 5
+struct {
+  struct spinlock lock;
+  int data[BUF_SIZE];
+  int count;
+  int head;
+  int tail;
+  int init;
+} pc_buf;
+
+void init_pc_buf() {
+  if (pc_buf.init == 0) {
+    initlock(&pc_buf.lock, "pc_buf");
+    pc_buf.count = 0;
+    pc_buf.head = 0;
+    pc_buf.tail = 0;
+    pc_buf.init = 1;
+  }
+}
+
+int sys_produce(void) {
+  int val;
+  if(argint(0, &val) < 0) return -1;
+  
+  init_pc_buf();
+  acquire(&pc_buf.lock);
+  
+  while (pc_buf.count == BUF_SIZE) {
+    sleep(&pc_buf.count, &pc_buf.lock); // Wait if full
+  }
+  
+  pc_buf.data[pc_buf.tail] = val;
+  pc_buf.tail = (pc_buf.tail + 1) % BUF_SIZE;
+  pc_buf.count++;
+  
+  cprintf("[Kernel] Produced %d, count: %d\n", val, pc_buf.count);
+  
+  wakeup(&pc_buf.count); // Wake up consumers
+  release(&pc_buf.lock);
+  return 0;
+}
+
+int sys_consume(void) {
+  int val;
+  
+  init_pc_buf();
+  acquire(&pc_buf.lock);
+  
+  while (pc_buf.count == 0) {
+    sleep(&pc_buf.count, &pc_buf.lock); // Wait if empty
+  }
+  
+  val = pc_buf.data[pc_buf.head];
+  pc_buf.head = (pc_buf.head + 1) % BUF_SIZE;
+  pc_buf.count--;
+  
+  cprintf("[Kernel] Consumed %d, count: %d\n", val, pc_buf.count);
+  
+  wakeup(&pc_buf.count); // Wake up producers
+  release(&pc_buf.lock);
+  return val;
+}
 
 int
 sys_fork(void)
